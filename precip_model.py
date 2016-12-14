@@ -22,16 +22,30 @@ class precip_model(object):
         self.sc = self.db['consts']
 
 
+        # Hack to get it to interpolate when there's only one longitude:
+        # (sorry)
+        if len(self.out_lons) == 1:
+            self.out_lons = np.arange(-10, 11, 1)
+            weights = np.exp(-1.0*np.abs(self.out_lons)/2.1)
+            print weights
+
+            self.db['N'] = self.db['N']*weights[np.newaxis, np.newaxis, :, np.newaxis]
+            self.db['S'] = self.db['S']*weights[np.newaxis, np.newaxis, :, np.newaxis]
+            # self.db['N'] = np.tile(self.db['N'], [1,1,2,1])
+            # self.db['S'] = np.tile(self.db['S'], [1,1,2,1])
+            # self.out_lons = np.array([-0.5, 0.5]) + self.out_lons[0]
+
         if cumsum:
-            self.N = np.cumsum(self.db['N'],axis=3)*self.sc.T_STEP
-            self.S = np.cumsum(self.db['S'],axis=3)*self.sc.T_STEP
+            self.N = np.cumsum(np.maximum(0, self.db['N']),axis=3)*self.sc.T_STEP
+            self.S = np.cumsum(np.maximum(0, self.db['S']),axis=3)*self.sc.T_STEP
         else:
-            self.N = self.db['N']
-            self.S = self.db['S']
+            self.N = np.maximum(0, self.db['N'])
+            self.S = np.maximum(0, self.db['S'])
 
         # Interpolating objects:
         self.N_interp = interpolate.RegularGridInterpolator((self.in_lats, self.out_lats, self.out_lons, self.t), self.N, fill_value=0, bounds_error=False)
         self.S_interp = interpolate.RegularGridInterpolator((self.in_lats, self.out_lats, self.out_lons, self.t), self.S, fill_value=0, bounds_error=False)
+
 
 
         # Initialize any other parameters we might store:
@@ -54,7 +68,7 @@ class precip_model(object):
         #    in = S, out = N  --> Southern hemisphere
         #    in = S, out = S  --> Northern hemisphere
 
-        assert len(in_lat) == len(out_lat) == len(t) == len(out_lon), "Length mismatch!"
+        # assert len(in_lat) == len(out_lat) == len(t) == len(out_lon), "Length mismatch!"
 
         use_southern_hemi = np.array(((in_lat > 0) ^ (out_lat > 0)).ravel())
         
@@ -99,7 +113,8 @@ class precip_model(object):
 
         out_data = np.zeros(len(keys))
 
-        out_data[ use_southern_hemi] = np.maximum(0,self.S_interp(keys_S))
+
+        out_data[ use_southern_hemi] = np.maximum(0, self.S_interp(keys_S))
         out_data[~use_southern_hemi] = np.maximum(0, self.N_interp(keys_N))
 
         # out_data = self.get_precip_at(tx, ty, tz)
@@ -119,6 +134,8 @@ class precip_model(object):
         self.pc_out_lats = out_lats
         self.pc_out_lons = out_lons
         self.pc_t = t
+
+
 
 
     def power_scaling(self, I0):

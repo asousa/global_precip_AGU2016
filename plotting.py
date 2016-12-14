@@ -9,7 +9,7 @@ import datetime
 
 
 def plot_flux_basemap(flux, in_lats, in_lons, flashes=None, plottime=None,
-                      logscale=False, clims=[0,1], num_contours=10, mode='counts'):
+                      logscale=False, clims=[0,1], num_contours=10, mode='counts', title=None):
 
     lons, lats = np.meshgrid(in_lons, in_lats)
 
@@ -48,7 +48,7 @@ def plot_flux_basemap(flux, in_lats, in_lons, flashes=None, plottime=None,
 
     # log scale?
     if logscale:
-        pd = np.log10(flux).ravel()
+        pd = np.log10(np.maximum(0, flux)).ravel()
     else:
         pd = flux.ravel()
     
@@ -94,7 +94,10 @@ def plot_flux_basemap(flux, in_lats, in_lons, flashes=None, plottime=None,
         # cax2 = divider.append_axes("bottom",size="2%",pad=0.5)
         # plt.colorbar(p2, cax=cax2)
 
-    ax1.set_title(plottime)
+    if title is None:
+        ax1.set_title(plottime)
+    else:
+        ax1.set_title(title)
     plt.tight_layout()
     #plt.subplots_adjust(0,0,1,1,0,0)
     return fig
@@ -204,15 +207,15 @@ def plot_flux_polar_4up(flux1, flux2, in_lats, in_lons, logscale=True, clims=[-7
         ax.append(plt.subplot(1,4,plt_ind+1))
 
         if plt_ind in [0,1]:
-            m = Basemap(projection='npstere',boundinglat=40, lon_0=270,resolution='l')
+            m = Basemap(projection='npstere',boundinglat=30, lon_0=270,resolution='l')
         else:
-            m = Basemap(projection='spstere',boundinglat=-40,lon_0=270,resolution='l')
+            m = Basemap(projection='spstere',boundinglat=-30,lon_0=270,resolution='l')
         m_list.append(m)
         x, y = m(mag_lons, mag_lats)
 
         # CS1 = m.contourf(x,y,flux,cmap=plt.cm.jet,extend='both')
 
-        m.fillcontinents(color='white',lake_color='aqua',alpha=0.5)
+        m.fillcontinents(color='white',lake_color='aqua',alpha=0.3)
 #         m.drawcoastlines(color='white',alpha=0.5)
 
 
